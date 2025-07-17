@@ -7,7 +7,7 @@ from folium import FeatureGroup
 
 
 # Title
-st.title("Global Mud Volcano Explorer 🌋")
+st.title("Global Mud Volcano and Gas Seep Explorer 🌋🫧")
 
 # ---------- Mud Volcano Data ----------
 mud_data = {
@@ -161,7 +161,7 @@ folium.LayerControl(collapsed=False).add_to(m)
 
 # Streamlit map display
 st.subheader("Mud Volcano and Gas Seep Map")
-st_data = st_folium(m, width=700, height=300)
+st_data = st_folium(m, width=700, height=400)
 
 # Optional table display
 with st.expander("Show Mud Volcano Data Table"):
