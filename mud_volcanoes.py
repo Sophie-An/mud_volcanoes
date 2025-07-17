@@ -3,6 +3,8 @@ import folium
 import pandas as pd
 from folium import IFrame
 from streamlit_folium import st_folium
+from folium import FeatureGroup
+
 
 # Title
 st.title("Global Mud Volcano Explorer 🌋")
