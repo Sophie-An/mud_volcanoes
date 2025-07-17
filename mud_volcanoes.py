@@ -161,7 +161,7 @@ folium.LayerControl(collapsed=False).add_to(m)
 
 # Streamlit map display
 st.subheader("Mud Volcano and Gas Seep Map")
-st_data = st_folium(m, width=700, height=500)
+st_data = st_folium(m, width=700, height=300)
 
 # Optional table display
 with st.expander("Show Mud Volcano Data Table"):
