@@ -7,8 +7,8 @@ from streamlit_folium import st_folium
 # Title
 st.title("Global Mud Volcano Explorer 🌋")
 
-# Data for Mud Volcanoes
-data = {
+# ---------- Mud Volcano Data ----------
+mud_data = {
     "Mud Volcano": [
         "Lei-Gong-Hou", "Goshogake Onsen", "Niikappu", "Murono (Tokamachi)", "Kamou (Tokamachi)", "Devil's Woodyard", 
         "Moruga Bouffe", "Erin Bouffe", "Digity Mud Volcano", "Salton Sea (Davis-Schrimpf)", "Mendocino Coast", 
@@ -52,23 +52,69 @@ data = {
     ]
 }
 
-# Convert DataFrame
-df = pd.DataFrame(data)
+mud_df = pd.DataFrame(mud_data)
 
-# Convert coordinates to decimal degrees
-def convert_to_decimal_degrees(coord):
+# ---------- Gas Seep Data ----------
+gas_data = {
+    "Gas Seep": [
+        "Enriquillo Basin", "Kushiro Gas Field", "Kyushu Island", "Chihpen & Hengchun", "Taipei Basin",
+        "Alberta Gas Seeps", "San Juan Basin", "Great Basin", "Basin and Range Province"
+    ],
+    "Country/Region": [
+        "Dominican Republic", "Japan (Hokkaido)", "Japan", "Taiwan", "Taiwan",
+        "Canada (Alberta)", "USA (New Mexico)", "USA (Nevada)", "USA (Nevada)"
+    ],
+    "Coordinates": [
+        "18.5°N, 71.0°W", "43.0°N, 144.0°E", "32.0°N, 130.0°E", "22.0°N, 120.7°E", "25.0°N, 121.5°E",
+        "52.0°N, 114.0°W", "36.5°N, 107.5°W", "39.5°N, 116.5°W", "39.0°N, 112.0°W"
+    ],
+    "Nearest City/Town": [
+        "Santo Domingo", "Kushiro", "Nagasaki", "Taitung", "Taipei",
+        "Calgary", "Farmington", "Ely", "Delta"
+    ],
+    "Distance to City": [
+        "~200 km", "~20 km", "~40-60 km", "~80 km", "~15 km", "~50-60 km", "~30-40 km", "~80 km", "~50 km"
+    ],
+    "Gas Infrastructure Nearby": [
+        "Limited infrastructure", "Well-developed gas infrastructure", "Extensive infrastructure",
+        "Moderate infrastructure", "Extensive infrastructure", "Extensive pipeline network",
+        "Significant pipeline network", "Minimal infrastructure", "Natural gas pipelines nearby"
+    ],
+    "Size": [
+        "Small", "Small to medium", "Small", "Small to medium", "Small",
+        "Small to medium", "Medium to large", "Small to medium", "Medium to large"
+    ]
+}
+
+gas_df = pd.DataFrame(gas_data)
+
+# ---------- Coordinate Converter ----------
+# def convert_to_decimal(coord):
+#     lat_str, lon_str = coord.split(", ")
+#     lat_val = float(lat_str[:-2])
+#     lon_val = float(lon_str[:-2])
+#     lat = lat_val if 'N' in lat_str else -lat_val
+#     lon = lon_val if 'E' in lon_str else -lon_val
+#     return lat, lon
+
+def convert_to_decimal(coord):
     lat_str, lon_str = coord.split(", ")
     lat_deg, lat_dir = lat_str.split("°")
     lon_deg, lon_dir = lon_str.split("°")
-    lat_decimal = float(lat_deg) if lat_dir.strip() == "N" else -float(lat_deg)
-    lon_decimal = float(lon_deg) if lon_dir.strip() == "E" else -float(lon_deg)
-    return lat_decimal, lon_decimal
+    lat = float(lat_deg) if lat_dir.strip() == "N" else -float(lat_deg)
+    lon = float(lon_deg) if lon_dir.strip() == "E" else -float(lon_deg)
+    return lat, lon
 
-# Add decimal columns for map plotting
-df[["lat", "lon"]] = df["Coordinates"].apply(lambda x: pd.Series(convert_to_decimal_degrees(x)))
+mud_df[['lat', 'lon']] = mud_df['Coordinates'].apply(lambda x: pd.Series(convert_to_decimal(x)))
+gas_df[['lat', 'lon']] = gas_df['Coordinates'].apply(lambda x: pd.Series(convert_to_decimal(x)))
 
-# Helper for popup HTML
-def create_popup(row):
+# ---------- Create Map ----------
+m = folium.Map(location=[30, 0], zoom_start=2)
+mud_group = FeatureGroup(name='Mud Volcanoes')
+gas_group = FeatureGroup(name='Gas Seeps')
+
+# ---------- Add Mud Volcano Markers ----------
+for _, row in mud_df.iterrows():
     popup_html = f"""
     <b>Name:</b> {row['Mud Volcano']}<br>
     <b>Location:</b> {row['Country/Region']}<br>
@@ -79,32 +125,45 @@ def create_popup(row):
     <b>Morphology:</b> {row['Morphology']}<br>
     <b>Size:</b> {row['Size']}<br>
     """
-    iframe = IFrame(popup_html, width=250, height=300)
-    return folium.Popup(iframe, max_width=300)
-
-# Color coding
-def get_color(eruptive):
-    return 'red' if eruptive == "Yes" else 'green'
-
-# Map setup
-m = folium.Map(location=[25, 0], zoom_start=2)
-
-# Add markers
-for _, row in df.iterrows():
+    popup = folium.Popup(IFrame(popup_html, width=250, height=300), max_width=300)
     folium.CircleMarker(
-        location=[row["lat"], row["lon"]],
+        location=[row['lat'], row['lon']],
         radius=8,
-        color=get_color(row["Eruptive?"]),
+        color='red' if row['Eruptive?'] == 'Yes' else 'green',
         fill=True,
-        fill_color=get_color(row["Eruptive?"]),
+        fill_color='red' if row['Eruptive?'] == 'Yes' else 'green',
         fill_opacity=0.7,
-        popup=create_popup(row)
-    ).add_to(m)
+        popup=popup
+    ).add_to(mud_group)
+
+# ---------- Add Gas Seep Markers ----------
+for _, row in gas_df.iterrows():
+    popup_html = f"""
+    <b>Name:</b> {row['Gas Seep']}<br>
+    <b>Location:</b> {row['Country/Region']}<br>
+    <b>Nearest City/Town:</b> {row['Nearest City/Town']} ({row['Distance to City']})<br>
+    <b>Gas Infrastructure Nearby:</b> {row['Gas Infrastructure Nearby']}<br>
+    <b>Size:</b> {row['Size']}<br>
+    """
+    popup = folium.Popup(IFrame(popup_html, width=250, height=200), max_width=300)
+    folium.Marker(
+        location=[row['lat'], row['lon']],
+        icon=folium.Icon(color='blue', icon='cloud'),
+        popup=popup
+    ).add_to(gas_group)
+
+# ---------- Add Groups and Controls ----------
+mud_group.add_to(m)
+gas_group.add_to(m)
+folium.LayerControl(collapsed=False).add_to(m)
 
 # Streamlit map display
-st.subheader("Mud Volcano Map")
+st.subheader("Mud Volcano and Gas Seep Map")
 st_data = st_folium(m, width=700, height=500)
 
 # Optional table display
-with st.expander("Show Volcano Data Table"):
-    st.dataframe(df.drop(columns=["lat", "lon"]))
+with st.expander("Show Mud Volcano Data Table"):
+    st.dataframe(mud_df.drop(columns=["lat", "lon"]))
+
+with st.expander("Show Gas Seep Data Table"):
+    st.dataframe(gas_df.drop(columns=["lat", "lon"]))
